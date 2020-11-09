@@ -37,6 +37,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.Serializable;
+import java.util.regex.Pattern;
 
 /**
  * An event configuration that causes the build to be triggered when a patchset is created.
@@ -50,6 +51,7 @@ public class PluginPatchsetCreatedEvent extends PluginGerritEvent implements Ser
     private boolean excludeNoCodeChange = false;
     private boolean excludePrivateState = false;
     private boolean excludeWipState = false;
+    private String commitMessageContainsRegEx = "";
 
     /**
      * Default constructor.
@@ -61,6 +63,7 @@ public class PluginPatchsetCreatedEvent extends PluginGerritEvent implements Ser
         this.excludeNoCodeChange = false;
         this.excludePrivateState = false;
         this.excludeWipState = false;
+        this.commitMessageContainsRegEx = "";
     }
 
     /**
@@ -124,6 +127,15 @@ public class PluginPatchsetCreatedEvent extends PluginGerritEvent implements Ser
     }
 
     /**
+     * Setter for commitMessageContains
+     * @param commitMessageContainsRegEx Trigger if this text is included in the commit message
+     */
+    @DataBoundSetter
+    public void setCommitMessageContainsRegEx(String commitMessageContainsRegEx) {
+        this.commitMessageContainsRegEx = commitMessageContainsRegEx;
+    }
+
+    /**
      * Getter for the Descriptor.
      * @return the Descriptor for the PluginPatchsetCreatedEvent.
      */
@@ -177,6 +189,12 @@ public class PluginPatchsetCreatedEvent extends PluginGerritEvent implements Ser
         return excludeWipState;
     }
 
+    /**
+     * Getter for commitMessageContains field.
+     * @return commitMessageContains
+     */
+    public String getCommitMessageContainsRegEx() { return commitMessageContainsRegEx; }
+
     @Override
     public boolean shouldTriggerOn(GerritTriggeredEvent event) {
         if (!super.shouldTriggerOn(event)) {
@@ -202,6 +220,11 @@ public class PluginPatchsetCreatedEvent extends PluginGerritEvent implements Ser
         }
         if (excludeWipState && ((PatchsetCreated)event).getChange().isWip()) {
             return false;
+        }
+        if (null != this.commitMessageContainsRegEx && !this.commitMessageContainsRegEx.isEmpty()) {
+            Pattern pattern = Pattern.compile(this.commitMessageContainsRegEx, Pattern.DOTALL | Pattern.MULTILINE);
+            boolean shouldTrigger = pattern.matcher(((PatchsetCreated)event).getChange().getCommitMessage()).find();
+            return shouldTrigger;
         }
         return true;
     }
